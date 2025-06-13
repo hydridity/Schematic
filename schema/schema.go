@@ -10,6 +10,7 @@ import (
 type Constraint interface {
 	Consume([]string) ([]string, error)
 	Debug() string
+	GetVariableName() string
 }
 
 // Concrete realization of our constraints.
@@ -40,6 +41,10 @@ func (c *LiteralConstraint) Debug() string {
 	return fmt.Sprintf("LiteralConstraint(%s)", c.Literal)
 }
 
+func (c *LiteralConstraint) GetVariableName() string {
+	return "" // Literal constraints do not have a variable name
+}
+
 func (c *WildcardSingleConstraint) Consume(path []string) ([]string, error) {
 	if len(path) <= 0 {
 		return nil, errors.New("empty path")
@@ -50,12 +55,20 @@ func (c *WildcardSingleConstraint) Debug() string {
 	return "WildcardSingleConstraint"
 }
 
+func (c *WildcardSingleConstraint) GetVariableName() string {
+	return ""
+}
+
 func (c *WildcardMultiConstraint) Consume(path []string) ([]string, error) {
 	return []string{}, nil
 }
 
 func (c *WildcardMultiConstraint) Debug() string {
 	return "WildcardMultiConstraint"
+}
+
+func (c *WildcardMultiConstraint) GetVariableName() string {
+	return ""
 }
 
 func (c *VariableConstraint) Consume(path []string) ([]string, error) {
@@ -74,6 +87,10 @@ func (c *VariableConstraint) Debug() string {
 	return fmt.Sprintf("VariableConstraint(%s)", c.VariableName)
 }
 
+func (c *VariableConstraint) GetVariableName() string {
+	return c.VariableName
+}
+
 func (c *VariableSetConstraint) Consume(path []string) ([]string, error) {
 	if len(path) <= 0 {
 		return nil, errors.New("empty path")
@@ -86,6 +103,10 @@ func (c *VariableSetConstraint) Consume(path []string) ([]string, error) {
 
 func (c *VariableSetConstraint) Debug() string {
 	return fmt.Sprintf("VariableSetConstraint(%s)", c.VariableName)
+}
+
+func (c *VariableSetConstraint) GetVariableName() string {
+	return c.VariableName
 }
 
 func GetVariableValue(name string) string {
