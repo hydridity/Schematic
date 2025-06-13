@@ -5,6 +5,7 @@ import (
 	"log"
 	"schematic/parser"
 	"schematic/schema"
+	"strings"
 
 	"github.com/alecthomas/repr"
 	"github.com/hashicorp/hcl/v2"
@@ -71,11 +72,11 @@ func loadConfig() Config {
 		log.Fatalf("Failed to load configuration: %s", err)
 	}
 	log.Printf("Configuration is %#v", config)
-	processConfig(config)
+	debugProcessConfig(config)
 	return config
 }
 
-func processConfig(config Config) {
+func debugProcessConfig(config Config) {
 	for _, input := range config.Inputs {
 		switch input.Type {
 		case "environment":
@@ -98,7 +99,8 @@ func processConfig(config Config) {
 	}
 }
 
-func debug() { //This is simulation of application that imports the parser and schema packages and handles context
+// This is simulation of application that imports the parser and schema packages and handles context
+func debug() {
 	config := loadConfig()
 
 	parser, err := parser.NewParser()
@@ -144,4 +146,46 @@ func debug() { //This is simulation of application that imports the parser and s
 		fmt.Println("Part:", part.Debug())
 		fmt.Println("Requests:", part.GetVariableName())
 	}
+}
+
+func Validate(input string, constraints []schema.Constraint, variableStore VariableStore) error {
+	inputSegments := strings.Split(strings.Trim(input, "/"), "/")
+	for _, constraint := range constraints {
+		if remainder, err := constraint.Consume(inputSegments); err != nil {
+			if len(remainder) > 0 {
+				fmt.Printf("input '%s' did not fully consume all segments, remaining: %v\n", input, remainder)
+			}
+			return fmt.Errorf("validation failed for input '%s': %w", input, err)
+		}
+	}
+	return nil
+}
+
+func main() {
+	toDebug := false
+	if toDebug {
+		debug()
+	}
+
+	config := loadConfig()
+	parser, err := parser.NewParser()
+	if err != nil {
+		panic(err)
+	}
+
+	schemaStr := config.Schema
+	schemaAst, err := parser.ParseString("", schemaStr)
+	if err != nil {
+		panic(err)
+	}
+
+	VariableStore := BuildVariableStore(config)
+	fmt.Printf("Variable Store: %#v\n", VariableStore)
+	schema := schema.CompileSchema(schemaAst, nil)
+
+	inputStr := "deployment/group1/helm-project1/postgres/admin" // TODO: Some inputs for raw API Vault paths will have "data" after mounth path
+	//TODO Example: "deployment/data/group1/helm-project1/postgres/admin"
+	fmt.Println("Input to validate:", inputStr)
+	Validate(inputStr, schema, VariableStore)
+
 }
