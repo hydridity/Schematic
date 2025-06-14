@@ -7,9 +7,14 @@ import (
 	"github.com/hydridity/Schematic/pkg/parser"
 )
 
+type VariableStore interface {
+	GetVariable(name string) (string, bool)
+	GetVariableSet(name string) ([]string, bool)
+}
+
 // The basic interface of our constraints.
 type Constraint interface {
-	Consume([]string) ([]string, error)
+	Consume([]string, VariableStore) ([]string, error)
 	Debug() string
 	GetVariableName() string
 }
@@ -28,7 +33,7 @@ type VariableSetConstraint struct {
 	VariableName string
 }
 
-func (c *LiteralConstraint) Consume(path []string) ([]string, error) {
+func (c *LiteralConstraint) Consume(path []string, store VariableStore) ([]string, error) {
 	if len(path) <= 0 {
 		return nil, errors.New("empty path")
 	}
@@ -46,7 +51,7 @@ func (c *LiteralConstraint) GetVariableName() string {
 	return "" // Literal constraints do not have a variable name
 }
 
-func (c *WildcardSingleConstraint) Consume(path []string) ([]string, error) {
+func (c *WildcardSingleConstraint) Consume(path []string, store VariableStore) ([]string, error) {
 	if len(path) <= 0 {
 		return nil, errors.New("empty path")
 	}
@@ -60,7 +65,7 @@ func (c *WildcardSingleConstraint) GetVariableName() string {
 	return ""
 }
 
-func (c *WildcardMultiConstraint) Consume(path []string) ([]string, error) {
+func (c *WildcardMultiConstraint) Consume(path []string, store VariableStore) ([]string, error) {
 	return []string{}, nil
 }
 
@@ -72,11 +77,16 @@ func (c *WildcardMultiConstraint) GetVariableName() string {
 	return ""
 }
 
-func (c *VariableConstraint) Consume(path []string) ([]string, error) {
+func (c *VariableConstraint) Consume(path []string, store VariableStore) ([]string, error) {
 	if len(path) <= 0 {
 		return nil, errors.New("empty path")
 	}
-	if path[0] != GetVariableValue(c.VariableName) {
+	variable, found := store.GetVariable(c.VariableName)
+	if !found {
+		return nil, fmt.Errorf("variable '%s' not found in store", c.VariableName)
+	}
+
+	if path[0] != variable {
 		// Perhaps pointer ?
 		// Perhaps "variable store" in the VariableConstraint object itself ?
 		return nil, errors.New("invalid variable constraint value")
@@ -92,11 +102,25 @@ func (c *VariableConstraint) GetVariableName() string {
 	return c.VariableName
 }
 
-func (c *VariableSetConstraint) Consume(path []string) ([]string, error) {
+func (c *VariableSetConstraint) Consume(path []string, store VariableStore) ([]string, error) {
 	if len(path) <= 0 {
 		return nil, errors.New("empty path")
 	}
-	if path[0] != GetVariableValue(c.VariableName) {
+	variable, found := store.GetVariableSet(c.VariableName)
+	if !found {
+		return nil, fmt.Errorf("variable '%s' not found in store", c.VariableName)
+	}
+	if len(variable) == 0 {
+		return nil, fmt.Errorf("variable set '%s' is empty", c.VariableName)
+	}
+	foundInSet := false
+	for _, v := range variable {
+		if path[0] == v {
+			foundInSet = true
+			break
+		}
+	}
+	if !foundInSet {
 		return nil, errors.New("invalid variable set constraint value")
 	}
 	return path[1:], nil
