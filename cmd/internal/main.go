@@ -2,8 +2,10 @@ package main
 
 import (
 	"fmt"
-	"schematic/parser"
-	"schematic/schema"
+
+	"github.com/hydridity/Schematic/pkg/schema"
+
+	"github.com/hydridity/Schematic/pkg/parser"
 
 	"github.com/alecthomas/repr"
 )
