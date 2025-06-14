@@ -3,7 +3,8 @@ package schema
 import (
 	"errors"
 	"fmt"
-	"schematic/parser"
+
+	"github.com/hydridity/Schematic/pkg/parser"
 )
 
 // The basic interface of our constraints.

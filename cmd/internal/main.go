@@ -3,9 +3,11 @@ package main
 import (
 	"fmt"
 	"log"
-	"schematic/parser"
-	"schematic/schema"
 	"strings"
+
+	"github.com/hydridity/Schematic/pkg/schema"
+
+	"github.com/hydridity/Schematic/pkg/parser"
 
 	"github.com/alecthomas/repr"
 	"github.com/hashicorp/hcl/v2"
