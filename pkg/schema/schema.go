@@ -3,6 +3,7 @@ package schema
 import (
 	"errors"
 	"fmt"
+	"strings"
 
 	"github.com/hydridity/Schematic/pkg/parser"
 )
@@ -86,11 +87,25 @@ func (c *VariableConstraint) Consume(path []string, store VariableStore) ([]stri
 		return nil, fmt.Errorf("variable '%s' not found in store", c.VariableName)
 	}
 
-	if path[0] != variable {
-		// Perhaps pointer ?
-		// Perhaps "variable store" in the VariableConstraint object itself ?
-		return nil, errors.New("invalid variable constraint value")
+	// Check if variable contains "/"
+	if len(variable) > 0 && strings.Contains(variable, "/") {
+		parts := strings.Split(variable, "/")
+		if len(path) < len(parts) {
+			return nil, errors.New("path too short for variable with '/'")
+		}
+		for i, part := range parts {
+			if path[i] != part {
+				return nil, errors.New("invalid variable constraint value")
+			}
+		}
+		return path[len(parts):], nil
 	}
+
+	// if path[0] != variable {
+	// 	// Perhaps pointer ?
+	// 	// Perhaps "variable store" in the VariableConstraint object itself ?
+	// 	return nil, errors.New("invalid variable constraint value")
+	// }
 	return path[1:], nil
 }
 
