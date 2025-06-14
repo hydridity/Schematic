@@ -174,12 +174,14 @@ func debug() {
 func Validate(input string, constraints []schema.Constraint, variableStore VariableStore) error {
 	inputSegments := strings.Split(strings.Trim(input, "/"), "/")
 	for _, constraint := range constraints {
-		if remainder, err := constraint.Consume(inputSegments); err != nil {
-			if len(remainder) > 0 {
-				fmt.Printf("input '%s' did not fully consume all segments, remaining: %v\n", input, remainder)
-			}
-			return fmt.Errorf("validation failed for input '%s': %w", input, err)
+		var err error
+		inputSegments, err = constraint.Consume(inputSegments, variableStore)
+		if err != nil {
+			return fmt.Errorf("failed to consume input '%s' with constraint '%s': %w", input, constraint.Debug(), err)
 		}
+	}
+	if len(inputSegments) > 0 {
+		return fmt.Errorf("input '%s' did not fully consume all segments, remaining: %v", input, inputSegments)
 	}
 	return nil
 }
@@ -209,6 +211,12 @@ func main() {
 	inputStr := "deployment/group1/helm-project1/postgres/admin" // TODO: Some inputs for raw API Vault paths will have "data" after mounth path
 	//TODO Example: "deployment/data/group1/helm-project1/postgres/admin"
 	fmt.Println("Input to validate:", inputStr)
-	Validate(inputStr, schema, VariableStore)
+	err = Validate(inputStr, schema, VariableStore)
+	if err != nil {
+		fmt.Printf("Validation failed: %s\n", err)
+		os.Exit(1)
+	} else {
+		fmt.Println("Validation succeeded")
+	}
 
 }
