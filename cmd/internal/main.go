@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"log"
+	"os"
 	"strings"
 
 	"github.com/hydridity/Schematic/pkg/schema"
@@ -38,6 +39,26 @@ type Config struct {
 type VariableStore struct {
 	Environments map[string]Environment
 	VariableSets map[string]Variable_Set
+}
+
+func (vs VariableStore) GetVariable(name string) (string, bool) {
+	env, ok := vs.Environments[name]
+	if !ok {
+		return "", false
+	}
+	value, found := os.LookupEnv(env.From)
+	if !found {
+		return "", false
+	}
+	return value, true
+}
+
+func (vs VariableStore) GetVariableSet(name string) ([]string, bool) {
+	set, ok := vs.VariableSets[name]
+	if !ok {
+		return nil, false
+	}
+	return set.Content, true
 }
 
 func BuildVariableStore(config Config) VariableStore {
