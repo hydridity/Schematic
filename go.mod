@@ -1,4 +1,4 @@
-module schematic
+module github.com/hydridity/Schematic
 
 go 1.24.3
 
