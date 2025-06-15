@@ -86,7 +86,7 @@ func (c *VariableConstraint) Consume(path []string, store VariableStore) ([]stri
 	if !found {
 		return nil, fmt.Errorf("variable '%s' not found in store", c.VariableName)
 	}
-
+	// TODO: Handle variable without "/"
 	// Check if variable contains "/"
 	if len(variable) > 0 && strings.Contains(variable, "/") {
 		parts := strings.Split(variable, "/")
