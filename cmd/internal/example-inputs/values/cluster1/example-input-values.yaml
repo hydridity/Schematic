@@ -1,0 +1,5 @@
+secrets:
+  - name: secret1
+    value: "<path:deployment/data/group2/helm-project1/postgres#secret-key>"
+  - name: secret1
+    value: "<path:deployment/data/group2/helm-project1/kafka#secret-key>"
