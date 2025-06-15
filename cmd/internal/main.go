@@ -2,15 +2,10 @@ package main
 
 import (
 	"fmt"
+	"github.com/hydridity/Schematic/pkg/schema"
 	"log"
 	"os"
-	"strings"
 
-	"github.com/hydridity/Schematic/pkg/schema"
-
-	"github.com/hydridity/Schematic/pkg/parser"
-
-	"github.com/alecthomas/repr"
 	"github.com/hashicorp/hcl/v2"
 	"github.com/hashicorp/hcl/v2/gohcl"
 	"github.com/hashicorp/hcl/v2/hclsimple"
@@ -122,133 +117,28 @@ func debugProcessConfig(config Config) {
 	}
 }
 
-// This is simulation of application that imports the parser and schema packages and handles context
-func debug() {
-	config := loadConfig()
-
-	parser, err := parser.NewParser()
-	if err != nil {
-		panic(err)
-	}
-
-	VariableStore := BuildVariableStore(config)
-	fmt.Printf("Variable Store: %#v\n", VariableStore)
-
-	//fmt.Println(parser.String())
-	schemaStr := config.Schema
-	schemaAst, err := parser.ParseString("", schemaStr)
-	if err != nil {
-		panic(err)
-	}
-
-	schema := schema.CompileSchema(schemaAst, nil)
-
-	fmt.Println("Schema AST:")
-	repr.Println(schemaAst)
-
-	fmt.Println("Parsed AST schema:")
-	for _, part := range schemaAst.Parts {
-		switch {
-		case part.Var != nil:
-			fmt.Println("Var:", part.Var.Name)
-			if part.Var.Modifier != nil {
-				args := strings.Join(part.Var.Modifier.Args, ", ")
-				fmt.Printf("Modifier: %s(%s), Arguments: %s\n", part.Var.Modifier.Func, args, args)
-			}
-		case part.VarSet != nil:
-			fmt.Println("VarSet:", part.VarSet.Name)
-		case part.Wildcard != nil:
-			fmt.Println("Wildcard:", *part.Wildcard)
-		case part.Literal != nil:
-			fmt.Println("Literal:", *part.Literal)
-		}
-	}
-
-	fmt.Printf("Compiled schema constraints: %#v\n", schema)
-
-	for _, part := range schema {
-		fmt.Println("Part:", part.Debug())
-		fmt.Println("Requests:", part.GetVariableName())
-	}
-}
-
-func modifierStripLastPrefix(variable []string, args []string) ([]string, error) {
-	if len(args) <= 0 {
-		return nil, fmt.Errorf("strip_last_prefix: expected at least 1 argument, found %d", len(args))
-	}
-
-	if len(variable) <= 0 {
-		return variable, nil // stripping prefix from an empty variable results in an empty variable, no error
-	}
-
-	for _, prefix := range args {
-		lastIndex := len(variable) - 1
-		if strings.HasPrefix(variable[lastIndex], prefix) {
-			variable[lastIndex] = variable[lastIndex][len(prefix):]
-			break // Strip only one prefix
-		}
-	}
-
-	return variable, nil
-}
-
-func getPredefinedModifiers() map[string]schema.VariableModifierFunction {
-	return map[string]schema.VariableModifierFunction{
-		"strip_last_prefix": modifierStripLastPrefix,
-	}
-}
-
-func Validate(input string, constraints []schema.Constraint, variableStore schema.VariableStore) error {
-	predefinedModifiers := getPredefinedModifiers()
-	context := schema.ValidationContext{
-		VariableStore:     variableStore,
-		VariableModifiers: predefinedModifiers,
-	}
-	inputSegments := strings.Split(strings.Trim(input, "/"), "/")
-	for _, constraint := range constraints {
-		var err error
-		inputSegments, err = constraint.Consume(inputSegments, &context)
-		if err != nil {
-			return fmt.Errorf("failed to consume input '%s' with constraint '%s': %w", input, constraint.Debug(), err)
-		}
-	}
-	if len(inputSegments) > 0 {
-		return fmt.Errorf("input '%s' did not fully consume all segments, remaining: %v", input, inputSegments)
-	}
-	return nil
-}
-
 func main() {
-	toDebug := false
-	if toDebug {
-		debug()
-	}
-
 	config := loadConfig()
-	parser, err := parser.NewParser()
-	if err != nil {
-		panic(err)
-	}
 
-	schemaStr := config.Schema
-	schemaAst, err := parser.ParseString("", schemaStr)
-	if err != nil {
-		panic(err)
+	variableStore := BuildVariableStore(config)
+	fmt.Printf("Variable Store: %#v\n", variableStore)
+	context := schema.ValidationContext{
+		VariableStore:     &variableStore,
+		VariableModifiers: nil,
 	}
-
-	VariableStore := BuildVariableStore(config)
-	fmt.Printf("Variable Store: %#v\n", VariableStore)
-	schema := schema.CompileSchema(schemaAst, nil)
+	schemaCompiled, err := schema.CreateSchema(config.Schema)
+	if err != nil {
+		log.Fatal(err)
+	}
 
 	inputStr := "deployment/group1/helm-project1/postgres/admin" // TODO: Some inputs for raw API Vault paths will have "data" after mounth path
 	//TODO Example: "deployment/data/group1/helm-project1/postgres/admin"
 	fmt.Println("Input to validate:", inputStr)
-	err = Validate(inputStr, schema, VariableStore)
+	err = schemaCompiled.Validate(inputStr, &context)
 	if err != nil {
 		fmt.Printf("Validation failed: %s\n", err)
 		os.Exit(1)
 	} else {
 		fmt.Println("Validation succeeded")
 	}
-
 }
