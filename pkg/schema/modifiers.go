@@ -3,6 +3,8 @@ package schema
 import (
 	"fmt"
 	"strings"
+
+	"github.com/hydridity/Schematic/pkg/schema/common"
 )
 
 func modifierStripLastPrefix(variable []string, args []string) ([]string, error) {
@@ -25,8 +27,8 @@ func modifierStripLastPrefix(variable []string, args []string) ([]string, error)
 	return variable, nil
 }
 
-func getPredefinedModifiers() map[string]VariableModifierFunction {
-	return map[string]VariableModifierFunction{
+func getPredefinedModifiers() map[string]common.VariableModifierFunction {
+	return map[string]common.VariableModifierFunction{
 		"strip_last_prefix": modifierStripLastPrefix,
 	}
 }

@@ -5,30 +5,16 @@ import (
 	"strings"
 
 	"github.com/hydridity/Schematic/pkg/parser"
+	"github.com/hydridity/Schematic/pkg/schema/common"
 )
 
-type VariableStore interface {
-	GetVariable(name string) (string, bool)
-	GetVariableSet(name string) ([]string, bool)
-}
-
-// VariableModifierFunction represents a Modifier. It accepts a context variable value, split by '/', along with
-// a set of schema-provided arguments, and should modify the variable however it wants.
-// It should return the modified variable slice.
-type VariableModifierFunction func(variable []string, args []string) ([]string, error)
-
-type ValidationContext struct {
-	VariableStore     VariableStore
-	VariableModifiers map[string]VariableModifierFunction
-}
-
 type Schema interface {
-	Validate(input string, context *ValidationContext) error
+	Validate(input string, context *common.ValidationContext) error
 	String() string
 }
 
 type Impl struct {
-	Constraints []Constraint
+	Constraints []common.Constraint
 	ast         *parser.SchemaAST
 }
 
@@ -44,13 +30,13 @@ func (s *Impl) String() string {
 	return builder.String()
 }
 
-func (s *Impl) Validate(input string, context *ValidationContext) error {
+func (s *Impl) Validate(input string, context *common.ValidationContext) error {
 	mergedModifiers := getPredefinedModifiers()
 	for k, v := range context.VariableModifiers {
 		mergedModifiers[k] = v
 	}
 
-	mergedContext := ValidationContext{
+	mergedContext := common.ValidationContext{
 		VariableStore:     context.VariableStore,
 		VariableModifiers: mergedModifiers,
 	}
