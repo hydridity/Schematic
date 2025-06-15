@@ -6,6 +6,7 @@ require (
 	github.com/alecthomas/participle/v2 v2.1.4
 	github.com/alecthomas/repr v0.4.0
 	github.com/hashicorp/hcl/v2 v2.23.0
+	gopkg.in/yaml.v3 v3.0.1
 )
 
 require (
