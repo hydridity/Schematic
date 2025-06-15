@@ -5,16 +5,16 @@ import (
 	"strings"
 
 	"github.com/hydridity/Schematic/pkg/parser"
-	"github.com/hydridity/Schematic/pkg/schema/common"
+	ctx "github.com/hydridity/Schematic/pkg/schema/context"
 )
 
 type Schema interface {
-	Validate(input string, context *common.ValidationContext) error
+	Validate(input string, context *ctx.ValidationContext) error
 	String() string
 }
 
 type Impl struct {
-	Constraints []common.Constraint
+	Constraints []ctx.Constraint
 	ast         *parser.SchemaAST
 }
 
@@ -30,13 +30,13 @@ func (s *Impl) String() string {
 	return builder.String()
 }
 
-func (s *Impl) Validate(input string, context *common.ValidationContext) error {
+func (s *Impl) Validate(input string, context *ctx.ValidationContext) error {
 	mergedModifiers := getPredefinedModifiers()
 	for k, v := range context.VariableModifiers {
 		mergedModifiers[k] = v
 	}
 
-	mergedContext := common.ValidationContext{
+	mergedContext := ctx.ValidationContext{
 		VariableStore:     context.VariableStore,
 		VariableModifiers: mergedModifiers,
 	}

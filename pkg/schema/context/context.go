@@ -1,4 +1,4 @@
-package common
+package context
 
 // VariableModifierFunction represents a Modifier. It accepts a context variable value, split by '/', along with
 // a set of schema-provided arguments, and should modify the variable however it wants.

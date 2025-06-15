@@ -6,7 +6,7 @@ import (
 	"os"
 
 	"github.com/hydridity/Schematic/pkg/schema"
-	"github.com/hydridity/Schematic/pkg/schema/common"
+	"github.com/hydridity/Schematic/pkg/schema/context"
 
 	"github.com/hashicorp/hcl/v2"
 	"github.com/hashicorp/hcl/v2/gohcl"
@@ -124,7 +124,7 @@ func main() {
 
 	variableStore := BuildVariableStore(config)
 	fmt.Printf("Variable Store: %#v\n", variableStore)
-	context := common.ValidationContext{
+	context := context.ValidationContext{
 		VariableStore:     &variableStore,
 		VariableModifiers: nil,
 	}

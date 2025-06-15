@@ -6,7 +6,7 @@ import (
 	"strings"
 
 	"github.com/hydridity/Schematic/pkg/parser"
-	"github.com/hydridity/Schematic/pkg/schema/common"
+	"github.com/hydridity/Schematic/pkg/schema/context"
 )
 
 type VariableModifier struct {
@@ -15,14 +15,14 @@ type VariableModifier struct {
 }
 type VariableModifierInstance struct {
 	Modifier VariableModifier
-	Function common.VariableModifierFunction
+	Function context.VariableModifierFunction
 }
 type VariableConstraint struct {
 	VariableName string
 	Modifiers    []VariableModifier
 }
 
-func (c *VariableConstraint) Consume(path []string, context *common.ValidationContext) ([]string, error) {
+func (c *VariableConstraint) Consume(path []string, context *context.ValidationContext) ([]string, error) {
 	if len(path) <= 0 {
 		return nil, errors.New("empty path")
 	}

@@ -5,7 +5,7 @@ import (
 	"testing"
 
 	"github.com/hydridity/Schematic/pkg/schema"
-	"github.com/hydridity/Schematic/pkg/schema/common"
+	"github.com/hydridity/Schematic/pkg/schema/context"
 )
 
 type testVariableStore struct {
@@ -66,7 +66,7 @@ func TestVariableModifiers(t *testing.T) {
 					"technologies": {"postgres", "kafka"},
 				},
 			}
-			err := schemaCompiled.Validate(tc.input, &common.ValidationContext{VariableStore: store})
+			err := schemaCompiled.Validate(tc.input, &context.ValidationContext{VariableStore: store})
 			if tc.expectValidate && err != nil {
 				t.Errorf("expected validation to succeed, got error: %v", err)
 			}

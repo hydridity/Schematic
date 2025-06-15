@@ -5,14 +5,14 @@ import (
 	"fmt"
 
 	"github.com/hydridity/Schematic/pkg/parser"
-	"github.com/hydridity/Schematic/pkg/schema/common"
+	"github.com/hydridity/Schematic/pkg/schema/context"
 )
 
 type LiteralConstraint struct {
 	Literal string
 }
 
-func (c *LiteralConstraint) Consume(path []string, context *common.ValidationContext) ([]string, error) {
+func (c *LiteralConstraint) Consume(path []string, context *context.ValidationContext) ([]string, error) {
 	if len(path) <= 0 {
 		return nil, errors.New("empty path")
 	}

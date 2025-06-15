@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/hydridity/Schematic/pkg/schema/common"
+	"github.com/hydridity/Schematic/pkg/schema/context"
 )
 
 func modifierStripLastPrefix(variable []string, args []string) ([]string, error) {
@@ -27,8 +27,8 @@ func modifierStripLastPrefix(variable []string, args []string) ([]string, error)
 	return variable, nil
 }
 
-func getPredefinedModifiers() map[string]common.VariableModifierFunction {
-	return map[string]common.VariableModifierFunction{
+func getPredefinedModifiers() map[string]context.VariableModifierFunction {
+	return map[string]context.VariableModifierFunction{
 		"strip_last_prefix": modifierStripLastPrefix,
 	}
 }
