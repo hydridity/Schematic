@@ -2,8 +2,10 @@
 package main
 
 import (
-	"github.com/hydridity/Schematic/pkg/schema"
 	"testing"
+
+	"github.com/hydridity/Schematic/pkg/schema"
+	"github.com/hydridity/Schematic/pkg/schema/context"
 )
 
 type testVariableStore struct {
@@ -25,7 +27,7 @@ func TestVariableModifiers(t *testing.T) {
 	schemaStr := `$gitlab_path.strip_last_prefix("helm-", "ansible-")/$[technologies]/+`
 	schemaCompiled, err := schema.CreateSchema(schemaStr)
 	if err != nil {
-		t.Errorf("Error creating schema: %v", err)
+		t.Fatalf("Error creating schema: %v", err)
 	}
 
 	tests := []struct {
@@ -64,7 +66,7 @@ func TestVariableModifiers(t *testing.T) {
 					"technologies": {"postgres", "kafka"},
 				},
 			}
-			err := schemaCompiled.Validate(tc.input, &schema.ValidationContext{VariableStore: store})
+			err := schemaCompiled.Validate(tc.input, &context.ValidationContext{VariableStore: store})
 			if tc.expectValidate && err != nil {
 				t.Errorf("expected validation to succeed, got error: %v", err)
 			}
