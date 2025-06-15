@@ -3,7 +3,7 @@ package schema
 import (
 	"errors"
 	"fmt"
-	"github.com/hydridity/Schematic/internal/pkg/parser"
+	"github.com/hydridity/Schematic/pkg/parser"
 	"strings"
 )
 
