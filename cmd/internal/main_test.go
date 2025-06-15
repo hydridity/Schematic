@@ -2,9 +2,8 @@
 package main
 
 import (
-	"testing"
-	"github.com/hydridity/Schematic/pkg/parser"
 	"github.com/hydridity/Schematic/pkg/schema"
+	"testing"
 )
 
 type testVariableStore struct {
@@ -24,15 +23,10 @@ func (vs *testVariableStore) GetVariableSet(name string) ([]string, bool) {
 
 func TestVariableModifiers(t *testing.T) {
 	schemaStr := `$gitlab_path.strip_last_prefix("helm-", "ansible-")/$[technologies]/+`
-	parser, err := parser.NewParser()
+	schemaCompiled, err := schema.CreateSchema(schemaStr)
 	if err != nil {
-		t.Fatalf("failed to create parser: %v", err)
+		t.Errorf("Error creating schema: %v", err)
 	}
-	schemaAst, err := parser.ParseString("", schemaStr)
-	if err != nil {
-		t.Fatalf("failed to parse schema: %v", err)
-	}
-	schemaCompiled := schema.CompileSchema(schemaAst, nil)
 
 	tests := []struct {
 		name           string
@@ -61,7 +55,6 @@ func TestVariableModifiers(t *testing.T) {
 	}
 
 	for _, tc := range tests {
-		tc := tc // capture range variable
 		t.Run(tc.name, func(t *testing.T) {
 			store := &testVariableStore{
 				StringVariables: map[string]string{
@@ -71,7 +64,7 @@ func TestVariableModifiers(t *testing.T) {
 					"technologies": {"postgres", "kafka"},
 				},
 			}
-			err := Validate(tc.input, schemaCompiled, store)
+			err := schemaCompiled.Validate(tc.input, &schema.ValidationContext{VariableStore: store})
 			if tc.expectValidate && err != nil {
 				t.Errorf("expected validation to succeed, got error: %v", err)
 			}
