@@ -152,7 +152,8 @@ func debug() {
 		case part.Var != nil:
 			fmt.Println("Var:", part.Var.Name)
 			if part.Var.Modifier != nil {
-				fmt.Printf("Modifier: %s(%s), Argument: %s\n", part.Var.Modifier.Func, part.Var.Modifier.Arg, part.Var.Modifier.Arg)
+				args := strings.Join(part.Var.Modifier.Args, ", ")
+				fmt.Printf("Modifier: %s(%s), Arguments: %s\n", part.Var.Modifier.Func, args, args)
 			}
 		case part.VarSet != nil:
 			fmt.Println("VarSet:", part.VarSet.Name)
@@ -172,17 +173,21 @@ func debug() {
 }
 
 func modifierStripLastPrefix(variable []string, args []string) ([]string, error) {
-	if len(args) != 1 {
-		return nil, fmt.Errorf("strip_last_prefix: expected 1 argument, found %d", len(args))
+	if len(args) <= 0 {
+		return nil, fmt.Errorf("strip_last_prefix: expected at least 1 argument, found %d", len(args))
 	}
-	prefix := args[0]
 
 	if len(variable) <= 0 {
 		return variable, nil // stripping prefix from an empty variable results in an empty variable, no error
 	}
 
-	lastIndex := len(variable) - 1
-	variable[lastIndex] = strings.TrimPrefix(variable[lastIndex], prefix)
+	for _, prefix := range args {
+		lastIndex := len(variable) - 1
+		if strings.HasPrefix(variable[lastIndex], prefix) {
+			variable[lastIndex] = variable[lastIndex][len(prefix):]
+			break // Strip only one prefix
+		}
+	}
 
 	return variable, nil
 }
@@ -234,7 +239,8 @@ func testVariableModifiers() {
 		panic(err)
 	}
 
-	schemaStr := "$gitlab_path.strip_last_prefix(\"helm-\")/$[technologies]/+"
+	schemaStr := `$gitlab_path.strip_last_prefix("helm-", "ansible-")/$[technologies]/+`
+
 	schemaAst, err := parser.ParseString("", schemaStr)
 	if err != nil {
 		panic(err)
@@ -255,12 +261,21 @@ func testVariableModifiers() {
 	err = Validate(inputStr, schema, &store)
 	if err != nil {
 		fmt.Printf("Validation failed: %s\n", err)
-		os.Exit(1)
 	} else {
 		fmt.Println("Validation succeeded")
 	}
 
 	inputStr = "deployment/group1/project1/something-project1-backend/postgres/admin"
+	fmt.Println("Input to validate:", inputStr)
+	err = Validate(inputStr, schema, &store)
+	if err != nil {
+		fmt.Printf("Validation failed: %s\n", err)
+	} else {
+		fmt.Println("Validation succeeded")
+	}
+
+	store.StringVariables["gitlab_path"] = "deployment/group1/project1/ansible-project1-backend"
+	inputStr = "deployment/group1/project1/project1-backend/postgres/admin"
 	fmt.Println("Input to validate:", inputStr)
 	err = Validate(inputStr, schema, &store)
 	if err != nil {

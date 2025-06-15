@@ -199,10 +199,11 @@ func CompileSchema(schemaAst *parser.Schema, context map[string]string) []Constr
 			fmt.Println("Var:", part.Var.Name)
 			modifiers := make([]VariableModifier, 0)
 			if part.Var.Modifier != nil {
-				fmt.Printf("Modifier: %s(%s), Argument: %s\n", part.Var.Modifier.Func, part.Var.Modifier.Arg, part.Var.Modifier.Arg)
+				args := strings.Join(part.Var.Modifier.Args, ", ")
+				fmt.Printf("Modifier: %s(%s), Arguments: %s\n", part.Var.Modifier.Func, args, args)
 				modifiers = append(modifiers, VariableModifier{
 					FuncName: part.Var.Modifier.Func,
-					Args:     []string{part.Var.Modifier.Arg},
+					Args:     part.Var.Modifier.Args,
 				})
 			}
 			constraints = append(constraints, &VariableConstraint{VariableName: part.Var.Name, Modifiers: modifiers})

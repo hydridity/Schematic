@@ -27,8 +27,8 @@ type VarSet struct {
 }
 
 type Modifier struct {
-	Func string `@Ident "("`
-	Arg  string `@String ")"`
+	Func string   `@Ident "("`
+	Args []string `( Whitespace? @String ( Whitespace? "," Whitespace? @String )* Whitespace? ) ")"`
 }
 
 var schemaLexer = lexer.MustSimple([]lexer.SimpleRule{
@@ -36,6 +36,7 @@ var schemaLexer = lexer.MustSimple([]lexer.SimpleRule{
 	{Name: "String", Pattern: `"(?:\\.|[^"])*"`},
 	{Name: "Slash", Pattern: `/`},
 	{Name: "Dot", Pattern: `\.`},
+	{Name: "Comma", Pattern: `\,`},
 	{Name: "Plus", Pattern: `\+`},
 	{Name: "Star", Pattern: `\*`},
 	{Name: "Dollar", Pattern: `\$`},
