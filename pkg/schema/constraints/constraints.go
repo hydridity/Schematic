@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"github.com/hydridity/Schematic/pkg/parser"
 	"github.com/hydridity/Schematic/pkg/schema"
-	"log"
 )
 
 type constraintBuilder = func(part *parser.Part) schema.Constraint
