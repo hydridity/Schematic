@@ -152,7 +152,8 @@ func debug() {
 		case part.Var != nil:
 			fmt.Println("Var:", part.Var.Name)
 			if part.Var.Modifier != nil {
-				fmt.Printf("Modifier: %s(%s), Argument: %s\n", part.Var.Modifier.Func, part.Var.Modifier.Arg, part.Var.Modifier.Arg)
+				args := strings.Join(part.Var.Modifier.Args, ", ")
+				fmt.Printf("Modifier: %s(%s), Arguments: %s\n", part.Var.Modifier.Func, args, args)
 			}
 		case part.VarSet != nil:
 			fmt.Println("VarSet:", part.VarSet.Name)
@@ -171,11 +172,42 @@ func debug() {
 	}
 }
 
-func Validate(input string, constraints []schema.Constraint, variableStore VariableStore) error {
+func modifierStripLastPrefix(variable []string, args []string) ([]string, error) {
+	if len(args) <= 0 {
+		return nil, fmt.Errorf("strip_last_prefix: expected at least 1 argument, found %d", len(args))
+	}
+
+	if len(variable) <= 0 {
+		return variable, nil // stripping prefix from an empty variable results in an empty variable, no error
+	}
+
+	for _, prefix := range args {
+		lastIndex := len(variable) - 1
+		if strings.HasPrefix(variable[lastIndex], prefix) {
+			variable[lastIndex] = variable[lastIndex][len(prefix):]
+			break // Strip only one prefix
+		}
+	}
+
+	return variable, nil
+}
+
+func getPredefinedModifiers() map[string]schema.VariableModifierFunction {
+	return map[string]schema.VariableModifierFunction{
+		"strip_last_prefix": modifierStripLastPrefix,
+	}
+}
+
+func Validate(input string, constraints []schema.Constraint, variableStore schema.VariableStore) error {
+	predefinedModifiers := getPredefinedModifiers()
+	context := schema.ValidationContext{
+		VariableStore:     variableStore,
+		VariableModifiers: predefinedModifiers,
+	}
 	inputSegments := strings.Split(strings.Trim(input, "/"), "/")
 	for _, constraint := range constraints {
 		var err error
-		inputSegments, err = constraint.Consume(inputSegments, variableStore)
+		inputSegments, err = constraint.Consume(inputSegments, &context)
 		if err != nil {
 			return fmt.Errorf("failed to consume input '%s' with constraint '%s': %w", input, constraint.Debug(), err)
 		}
@@ -186,7 +218,79 @@ func Validate(input string, constraints []schema.Constraint, variableStore Varia
 	return nil
 }
 
+type testVariableStore struct {
+	StringVariables map[string]string
+	SetVariables    map[string][]string
+}
+
+func (vs *testVariableStore) GetVariable(name string) (string, bool) {
+	v, ok := vs.StringVariables[name]
+	return v, ok
+}
+
+func (vs *testVariableStore) GetVariableSet(name string) ([]string, bool) {
+	v, ok := vs.SetVariables[name]
+	return v, ok
+}
+
+func testVariableModifiers() {
+	parser, err := parser.NewParser()
+	if err != nil {
+		panic(err)
+	}
+
+	schemaStr := `$gitlab_path.strip_last_prefix("helm-", "ansible-")/$[technologies]/+`
+
+	schemaAst, err := parser.ParseString("", schemaStr)
+	if err != nil {
+		panic(err)
+	}
+
+	store := testVariableStore{
+		StringVariables: map[string]string{
+			"gitlab_path": "deployment/group1/project1/helm-project1-backend",
+		},
+		SetVariables: map[string][]string{
+			"technologies": {"postgres", "kafka"},
+		},
+	}
+	schema := schema.CompileSchema(schemaAst, nil)
+
+	inputStr := "deployment/group1/project1/project1-backend/postgres/admin"
+	fmt.Println("Input to validate:", inputStr)
+	err = Validate(inputStr, schema, &store)
+	if err != nil {
+		fmt.Printf("Validation failed: %s\n", err)
+	} else {
+		fmt.Println("Validation succeeded")
+	}
+
+	inputStr = "deployment/group1/project1/something-project1-backend/postgres/admin"
+	fmt.Println("Input to validate:", inputStr)
+	err = Validate(inputStr, schema, &store)
+	if err != nil {
+		fmt.Printf("Validation failed: %s\n", err)
+	} else {
+		fmt.Println("Validation succeeded")
+	}
+
+	store.StringVariables["gitlab_path"] = "deployment/group1/project1/ansible-project1-backend"
+	inputStr = "deployment/group1/project1/project1-backend/postgres/admin"
+	fmt.Println("Input to validate:", inputStr)
+	err = Validate(inputStr, schema, &store)
+	if err != nil {
+		fmt.Printf("Validation failed: %s\n", err)
+	} else {
+		fmt.Println("Validation succeeded")
+	}
+}
+
 func main() {
+	if _, found := os.LookupEnv("TEST_VARIABLE_MODIFIERS"); found {
+		testVariableModifiers()
+		return
+	}
+
 	toDebug := false
 	if toDebug {
 		debug()

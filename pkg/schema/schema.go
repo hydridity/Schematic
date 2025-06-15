@@ -13,9 +13,19 @@ type VariableStore interface {
 	GetVariableSet(name string) ([]string, bool)
 }
 
+// VariableModifierFunction represents a Modifier. It accepts a context variable value, split by '/', along with
+// a set of schema-provided arguments, and should modify the variable however it wants.
+// It should return the modified variable slice.
+type VariableModifierFunction func(variable []string, args []string) ([]string, error)
+
+type ValidationContext struct {
+	VariableStore     VariableStore
+	VariableModifiers map[string]VariableModifierFunction
+}
+
 // The basic interface of our constraints.
 type Constraint interface {
-	Consume([]string, VariableStore) ([]string, error)
+	Consume([]string, *ValidationContext) ([]string, error)
 	Debug() string
 	GetVariableName() string
 }
@@ -26,15 +36,25 @@ type LiteralConstraint struct {
 }
 type WildcardSingleConstraint struct{}
 type WildcardMultiConstraint struct{}
+
+type VariableModifier struct {
+	FuncName string
+	Args     []string
+}
+type VariableModifierInstance struct {
+	Modifier VariableModifier
+	Function VariableModifierFunction
+}
 type VariableConstraint struct {
 	VariableName string
+	Modifiers    []VariableModifier
 }
 
 type VariableSetConstraint struct {
 	VariableName string
 }
 
-func (c *LiteralConstraint) Consume(path []string, store VariableStore) ([]string, error) {
+func (c *LiteralConstraint) Consume(path []string, context *ValidationContext) ([]string, error) {
 	if len(path) <= 0 {
 		return nil, errors.New("empty path")
 	}
@@ -52,7 +72,7 @@ func (c *LiteralConstraint) GetVariableName() string {
 	return "" // Literal constraints do not have a variable name
 }
 
-func (c *WildcardSingleConstraint) Consume(path []string, store VariableStore) ([]string, error) {
+func (c *WildcardSingleConstraint) Consume(path []string, context *ValidationContext) ([]string, error) {
 	if len(path) <= 0 {
 		return nil, errors.New("empty path")
 	}
@@ -66,7 +86,7 @@ func (c *WildcardSingleConstraint) GetVariableName() string {
 	return ""
 }
 
-func (c *WildcardMultiConstraint) Consume(path []string, store VariableStore) ([]string, error) {
+func (c *WildcardMultiConstraint) Consume(path []string, context *ValidationContext) ([]string, error) {
 	return []string{}, nil
 }
 
@@ -78,35 +98,49 @@ func (c *WildcardMultiConstraint) GetVariableName() string {
 	return ""
 }
 
-func (c *VariableConstraint) Consume(path []string, store VariableStore) ([]string, error) {
+func (c *VariableConstraint) Consume(path []string, context *ValidationContext) ([]string, error) {
 	if len(path) <= 0 {
 		return nil, errors.New("empty path")
 	}
-	variable, found := store.GetVariable(c.VariableName)
+	variable, found := context.VariableStore.GetVariable(c.VariableName)
 	if !found {
 		return nil, fmt.Errorf("variable '%s' not found in store", c.VariableName)
 	}
-	// TODO: Handle variable without "/"
-	// Check if variable contains "/"
-	if len(variable) > 0 && strings.Contains(variable, "/") {
-		parts := strings.Split(variable, "/")
-		if len(path) < len(parts) {
-			return nil, errors.New("path too short for variable with '/'")
+
+	// Get modifier functions referenced in the constraint
+	modifierInstances := make([]VariableModifierInstance, 0, len(c.Modifiers))
+	for _, modifier := range c.Modifiers {
+		fun, found := context.VariableModifiers[modifier.FuncName]
+		if !found {
+			return nil, fmt.Errorf("modifier '%s' not found in context modifiers", modifier.FuncName)
 		}
-		for i, part := range parts {
-			if path[i] != part {
-				return nil, errors.New("invalid variable constraint value")
-			}
-		}
-		return path[len(parts):], nil
+		modifierInstances = append(modifierInstances, VariableModifierInstance{
+			Modifier: modifier,
+			Function: fun,
+		})
 	}
 
-	// if path[0] != variable {
-	// 	// Perhaps pointer ?
-	// 	// Perhaps "variable store" in the VariableConstraint object itself ?
-	// 	return nil, errors.New("invalid variable constraint value")
-	// }
-	return path[1:], nil
+	// Apply the modifier functions to the variable in order
+	var err error
+	parts := strings.Split(variable, "/")
+	for _, mod := range modifierInstances {
+		parts, err = mod.Function(parts, mod.Modifier.Args)
+		if err != nil {
+			return nil, fmt.Errorf("modifier '%s' application failed: %v", mod.Modifier.FuncName, err)
+		}
+	}
+
+	// Validate the input with modified variable parts
+
+	if len(path) < len(parts) {
+		return nil, fmt.Errorf("path too short for variable '%s'", variable)
+	}
+	for i, part := range parts {
+		if path[i] != part {
+			return nil, fmt.Errorf("invalid variable constraint value at part %d, variable '%s'", i, variable)
+		}
+	}
+	return path[len(parts):], nil
 }
 
 func (c *VariableConstraint) Debug() string {
@@ -117,11 +151,11 @@ func (c *VariableConstraint) GetVariableName() string {
 	return c.VariableName
 }
 
-func (c *VariableSetConstraint) Consume(path []string, store VariableStore) ([]string, error) {
+func (c *VariableSetConstraint) Consume(path []string, context *ValidationContext) ([]string, error) {
 	if len(path) <= 0 {
 		return nil, errors.New("empty path")
 	}
-	variable, found := store.GetVariableSet(c.VariableName)
+	variable, found := context.VariableStore.GetVariableSet(c.VariableName)
 	if !found {
 		return nil, fmt.Errorf("variable '%s' not found in store", c.VariableName)
 	}
@@ -163,11 +197,16 @@ func CompileSchema(schemaAst *parser.Schema, context map[string]string) []Constr
 
 		case part.Var != nil:
 			fmt.Println("Var:", part.Var.Name)
-			constraints = append(constraints, &VariableConstraint{VariableName: part.Var.Name})
+			modifiers := make([]VariableModifier, 0)
 			if part.Var.Modifier != nil {
-				// TODO: handle modifiers
-				fmt.Printf("Modifier: %s(%s), Argument: %s\n", part.Var.Modifier.Func, part.Var.Modifier.Arg, part.Var.Modifier.Arg)
+				args := strings.Join(part.Var.Modifier.Args, ", ")
+				fmt.Printf("Modifier: %s(%s), Arguments: %s\n", part.Var.Modifier.Func, args, args)
+				modifiers = append(modifiers, VariableModifier{
+					FuncName: part.Var.Modifier.Func,
+					Args:     part.Var.Modifier.Args,
+				})
 			}
+			constraints = append(constraints, &VariableConstraint{VariableName: part.Var.Name, Modifiers: modifiers})
 
 		case part.Wildcard != nil:
 			fmt.Println("Wildcard:", *part.Wildcard)
