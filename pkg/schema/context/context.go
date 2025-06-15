@@ -10,13 +10,6 @@ type ValidationContext struct {
 	VariableModifiers map[string]VariableModifierFunction
 }
 
-// The basic interface of our constraints.
-type Constraint interface {
-	Consume([]string, *ValidationContext) ([]string, error)
-	String() string
-	GetVariableName() string
-}
-
 type VariableStore interface {
 	GetVariable(name string) (string, bool)
 	GetVariableSet(name string) ([]string, bool)

@@ -23,12 +23,12 @@ func (c *WildcardSingleConstraint) GetVariableName() string {
 	return ""
 }
 
-func TryCreateWildcardSingleConstraint(part *parser.Part) *WildcardSingleConstraint {
+func TryCreateWildcardSingleConstraint(part *parser.Part) (*WildcardSingleConstraint, bool) {
 	if part.Wildcard == nil {
-		return nil
+		return nil, false
 	}
 	if *part.Wildcard != "+" {
-		return nil
+		return nil, false
 	}
-	return &WildcardSingleConstraint{}
+	return &WildcardSingleConstraint{}, true
 }

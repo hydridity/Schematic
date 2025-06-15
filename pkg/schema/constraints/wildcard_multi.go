@@ -23,12 +23,12 @@ func CreateWildcardMultiConstraint() *WildcardMultiConstraint {
 	return &WildcardMultiConstraint{}
 }
 
-func TryCreateWildcardMultiConstraint(part *parser.Part) *WildcardMultiConstraint {
+func TryCreateWildcardMultiConstraint(part *parser.Part) (*WildcardMultiConstraint, bool) {
 	if part.Wildcard == nil {
-		return nil
+		return nil, false
 	}
 	if *part.Wildcard != "*" {
-		return nil
+		return nil, false
 	}
-	return &WildcardMultiConstraint{}
+	return &WildcardMultiConstraint{}, true
 }

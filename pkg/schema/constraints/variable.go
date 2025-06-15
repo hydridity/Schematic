@@ -75,9 +75,9 @@ func (c *VariableConstraint) GetVariableName() string {
 	return c.VariableName
 }
 
-func TryCreateVariableConstraint(part *parser.Part) *VariableConstraint {
-	if part.Var != nil {
-		return nil
+func TryCreateVariableConstraint(part *parser.Part) (*VariableConstraint, bool) {
+	if part.Var == nil {
+		return nil, false
 	}
 	modifiers := make([]VariableModifier, 0)
 	if part.Var.Modifier != nil {
@@ -86,5 +86,5 @@ func TryCreateVariableConstraint(part *parser.Part) *VariableConstraint {
 			Args:     part.Var.Modifier.Args,
 		})
 	}
-	return &VariableConstraint{VariableName: part.Var.Name, Modifiers: modifiers}
+	return &VariableConstraint{VariableName: part.Var.Name, Modifiers: modifiers}, true
 }

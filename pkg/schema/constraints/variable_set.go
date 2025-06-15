@@ -44,9 +44,9 @@ func (c *VariableSetConstraint) GetVariableName() string {
 	return c.VariableName
 }
 
-func TryCreateVariableSetConstraint(part *parser.Part) *VariableSetConstraint {
+func TryCreateVariableSetConstraint(part *parser.Part) (*VariableSetConstraint, bool) {
 	if part.VarSet == nil {
-		return nil
+		return nil, false
 	}
-	return &VariableSetConstraint{VariableName: part.VarSet.Name}
+	return &VariableSetConstraint{VariableName: part.VarSet.Name}, true
 }

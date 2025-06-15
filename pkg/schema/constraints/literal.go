@@ -30,9 +30,9 @@ func (c *LiteralConstraint) GetVariableName() string {
 	return "" // Literal constraints do not have a variable name
 }
 
-func TryCreateLiteralConstraint(part *parser.Part) *LiteralConstraint {
+func TryCreateLiteralConstraint(part *parser.Part) (*LiteralConstraint, bool) {
 	if part.Literal == nil {
-		return nil
+		return nil, false
 	}
-	return &LiteralConstraint{Literal: *part.Literal}
+	return &LiteralConstraint{Literal: *part.Literal}, true
 }

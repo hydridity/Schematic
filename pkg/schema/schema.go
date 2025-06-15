@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"github.com/hydridity/Schematic/pkg/parser"
+	"github.com/hydridity/Schematic/pkg/schema/constraints"
 	ctx "github.com/hydridity/Schematic/pkg/schema/context"
 )
 
@@ -14,7 +15,7 @@ type Schema interface {
 }
 
 type Impl struct {
-	Constraints []ctx.Constraint
+	Constraints []constraints.Constraint
 	ast         *parser.SchemaAST
 }
 
@@ -67,6 +68,9 @@ func CreateSchema(schemaStr string) (Schema, error) {
 		return nil, err
 	}
 
-	constraints := CompileConstraints(schemaAst)
-	return &Impl{Constraints: constraints, ast: schemaAst}, nil
+	compiledConstraints, err := constraints.CompileConstraints(schemaAst)
+	if err != nil {
+		return nil, err
+	}
+	return &Impl{Constraints: compiledConstraints, ast: schemaAst}, nil
 }

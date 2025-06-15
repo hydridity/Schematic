@@ -27,7 +27,7 @@ func TestVariableModifiers(t *testing.T) {
 	schemaStr := `$gitlab_path.strip_last_prefix("helm-", "ansible-")/$[technologies]/+`
 	schemaCompiled, err := schema.CreateSchema(schemaStr)
 	if err != nil {
-		t.Errorf("Error creating schema: %v", err)
+		t.Fatalf("Error creating schema: %v", err)
 	}
 
 	tests := []struct {
