@@ -2,11 +2,15 @@ package main
 
 import (
 	"fmt"
+	"io/fs"
 	"log"
 	"os"
+	"path/filepath"
+	"regexp"
 	"strings"
 
 	"github.com/hydridity/Schematic/pkg/schema"
+	"gopkg.in/yaml.v3"
 
 	"github.com/hydridity/Schematic/pkg/parser"
 
@@ -90,7 +94,7 @@ func BuildVariableStore(config Config) VariableStore {
 
 func loadConfig() Config {
 	var config Config
-	err := hclsimple.DecodeFile("./cmd/internal/example-config.hcl", nil, &config)
+	err := hclsimple.DecodeFile("./example-config.hcl", nil, &config)
 	if err != nil {
 		log.Fatalf("Failed to load configuration: %s", err)
 	}
@@ -186,6 +190,43 @@ func Validate(input string, constraints []schema.Constraint, variableStore Varia
 	return nil
 }
 
+func ExtractFromYaml(path string) ([]string, error) {
+	var matches []string
+	re := regexp.MustCompile(`<path:[^>]+>`)
+	err := filepath.WalkDir(path, func(p string, d fs.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+		if d.IsDir() || !(strings.HasSuffix(p, ".yaml") || strings.HasSuffix(p, ".yml")) {
+			return nil
+		}
+		data, err := os.ReadFile(p)
+		if err != nil {
+			return err
+		}
+		var node yaml.Node
+		if err := yaml.Unmarshal(data, &node); err != nil {
+			return err
+		}
+		var walk func(n *yaml.Node)
+		walk = func(n *yaml.Node) {
+			if n.Kind == yaml.ScalarNode && n.Tag == "!!str" {
+				found := re.FindAllString(n.Value, -1)
+				matches = append(matches, found...)
+			}
+			for _, c := range n.Content {
+				walk(c)
+			}
+		}
+		walk(&node)
+		return nil
+	})
+	if err != nil {
+		return nil, err
+	}
+	return matches, nil
+}
+
 func main() {
 	toDebug := false
 	if toDebug {
@@ -204,11 +245,23 @@ func main() {
 		panic(err)
 	}
 
+	repr.Println(schemaAst)
+
+	inputs, err := ExtractFromYaml(".")
+	if err != nil {
+		log.Fatalf("Failed to extract paths from YAML files: %s", err)
+	}
+	fmt.Println("Extracted paths from YAML files")
+
+	for _, input := range inputs {
+		fmt.Println("Input:", input)
+	}
+
 	VariableStore := BuildVariableStore(config)
 	fmt.Printf("Variable Store: %#v\n", VariableStore)
 	schema := schema.CompileSchema(schemaAst, nil)
 
-	inputStr := "deployment/group1/helm-project1/postgres/admin" // TODO: Some inputs for raw API Vault paths will have "data" after mounth path
+	inputStr := "deployment/backend/postgres/admin" // TODO: Some inputs for raw API Vault paths will have "data" after mounth path
 	//TODO Example: "deployment/data/group1/helm-project1/postgres/admin"
 	fmt.Println("Input to validate:", inputStr)
 	err = Validate(inputStr, schema, VariableStore)
