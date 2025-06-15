@@ -171,11 +171,38 @@ func debug() {
 	}
 }
 
+func modifierStripLastPrefix(variable []string, args []string) ([]string, error) {
+	if len(args) != 1 {
+		return nil, fmt.Errorf("strip_last_prefix: expected 1 argument, found %d", len(args))
+	}
+	prefix := args[0]
+
+	if len(variable) <= 0 {
+		return variable, nil // stripping prefix from an empty variable results in an empty variable, no error
+	}
+
+	lastIndex := len(variable) - 1
+	variable[lastIndex] = strings.TrimPrefix(variable[lastIndex], prefix)
+
+	return variable, nil
+}
+
+func getPredefinedModifiers() map[string]schema.VariableModifierFunction {
+	return map[string]schema.VariableModifierFunction{
+		"strip_last_prefix": modifierStripLastPrefix,
+	}
+}
+
 func Validate(input string, constraints []schema.Constraint, variableStore VariableStore) error {
+	predefinedModifiers := getPredefinedModifiers()
+	context := schema.ValidationContext{
+		VariableStore:     variableStore,
+		VariableModifiers: predefinedModifiers,
+	}
 	inputSegments := strings.Split(strings.Trim(input, "/"), "/")
 	for _, constraint := range constraints {
 		var err error
-		inputSegments, err = constraint.Consume(inputSegments, variableStore)
+		inputSegments, err = constraint.Consume(inputSegments, &context)
 		if err != nil {
 			return fmt.Errorf("failed to consume input '%s' with constraint '%s': %w", input, constraint.Debug(), err)
 		}
