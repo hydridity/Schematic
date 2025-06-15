@@ -2,13 +2,14 @@ package constraints
 
 import (
 	"errors"
+
 	"github.com/hydridity/Schematic/pkg/parser"
-	"github.com/hydridity/Schematic/pkg/schema"
+	"github.com/hydridity/Schematic/pkg/schema/common"
 )
 
 type WildcardSingleConstraint struct{}
 
-func (c *WildcardSingleConstraint) Consume(path []string, context *schema.ValidationContext) ([]string, error) {
+func (c *WildcardSingleConstraint) Consume(path []string, context *common.ValidationContext) ([]string, error) {
 	if len(path) <= 0 {
 		return nil, errors.New("empty path")
 	}

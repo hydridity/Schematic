@@ -3,15 +3,16 @@ package constraints
 import (
 	"errors"
 	"fmt"
+
 	"github.com/hydridity/Schematic/pkg/parser"
-	"github.com/hydridity/Schematic/pkg/schema"
+	"github.com/hydridity/Schematic/pkg/schema/common"
 )
 
 type LiteralConstraint struct {
 	Literal string
 }
 
-func (c *LiteralConstraint) Consume(path []string, context *schema.ValidationContext) ([]string, error) {
+func (c *LiteralConstraint) Consume(path []string, context *common.ValidationContext) ([]string, error) {
 	if len(path) <= 0 {
 		return nil, errors.New("empty path")
 	}

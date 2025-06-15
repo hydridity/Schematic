@@ -2,12 +2,12 @@ package constraints
 
 import (
 	"github.com/hydridity/Schematic/pkg/parser"
-	"github.com/hydridity/Schematic/pkg/schema"
+	"github.com/hydridity/Schematic/pkg/schema/common"
 )
 
 type WildcardMultiConstraint struct{}
 
-func (c *WildcardMultiConstraint) Consume(path []string, context *schema.ValidationContext) ([]string, error) {
+func (c *WildcardMultiConstraint) Consume(path []string, context *common.ValidationContext) ([]string, error) {
 	return []string{}, nil
 }
 
