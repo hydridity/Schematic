@@ -2,15 +2,12 @@ package main
 
 import (
 	"fmt"
-	"io/fs"
 	"log"
 	"os"
-	"path/filepath"
-	"regexp"
 	"strings"
 
+	"github.com/hydridity/Schematic/cmd/internal/lib"
 	"github.com/hydridity/Schematic/pkg/schema"
-	"gopkg.in/yaml.v3"
 
 	"github.com/hydridity/Schematic/pkg/parser"
 
@@ -190,43 +187,6 @@ func Validate(input string, constraints []schema.Constraint, variableStore Varia
 	return nil
 }
 
-func ExtractFromYaml(path string) ([]string, error) {
-	var matches []string
-	re := regexp.MustCompile(`<path:[^>]+>`)
-	err := filepath.WalkDir(path, func(p string, d fs.DirEntry, err error) error {
-		if err != nil {
-			return err
-		}
-		if d.IsDir() || !(strings.HasSuffix(p, ".yaml") || strings.HasSuffix(p, ".yml")) {
-			return nil
-		}
-		data, err := os.ReadFile(p)
-		if err != nil {
-			return err
-		}
-		var node yaml.Node
-		if err := yaml.Unmarshal(data, &node); err != nil {
-			return err
-		}
-		var walk func(n *yaml.Node)
-		walk = func(n *yaml.Node) {
-			if n.Kind == yaml.ScalarNode && n.Tag == "!!str" {
-				found := re.FindAllString(n.Value, -1)
-				matches = append(matches, found...)
-			}
-			for _, c := range n.Content {
-				walk(c)
-			}
-		}
-		walk(&node)
-		return nil
-	})
-	if err != nil {
-		return nil, err
-	}
-	return matches, nil
-}
-
 func main() {
 	toDebug := false
 	if toDebug {
@@ -247,7 +207,7 @@ func main() {
 
 	repr.Println(schemaAst)
 
-	inputs, err := ExtractFromYaml(".")
+	inputs, err := lib.ExtractFromYaml(".")
 	if err != nil {
 		log.Fatalf("Failed to extract paths from YAML files: %s", err)
 	}
