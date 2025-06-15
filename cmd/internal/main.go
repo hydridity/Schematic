@@ -193,7 +193,7 @@ func getPredefinedModifiers() map[string]schema.VariableModifierFunction {
 	}
 }
 
-func Validate(input string, constraints []schema.Constraint, variableStore VariableStore) error {
+func Validate(input string, constraints []schema.Constraint, variableStore schema.VariableStore) error {
 	predefinedModifiers := getPredefinedModifiers()
 	context := schema.ValidationContext{
 		VariableStore:     variableStore,
@@ -213,7 +213,69 @@ func Validate(input string, constraints []schema.Constraint, variableStore Varia
 	return nil
 }
 
+type testVariableStore struct {
+	StringVariables map[string]string
+	SetVariables    map[string][]string
+}
+
+func (vs *testVariableStore) GetVariable(name string) (string, bool) {
+	v, ok := vs.StringVariables[name]
+	return v, ok
+}
+
+func (vs *testVariableStore) GetVariableSet(name string) ([]string, bool) {
+	v, ok := vs.SetVariables[name]
+	return v, ok
+}
+
+func testVariableModifiers() {
+	parser, err := parser.NewParser()
+	if err != nil {
+		panic(err)
+	}
+
+	schemaStr := "$gitlab_path.strip_last_prefix(\"helm-\")/$[technologies]/+"
+	schemaAst, err := parser.ParseString("", schemaStr)
+	if err != nil {
+		panic(err)
+	}
+
+	store := testVariableStore{
+		StringVariables: map[string]string{
+			"gitlab_path": "deployment/group1/project1/helm-project1-backend",
+		},
+		SetVariables: map[string][]string{
+			"technologies": {"postgres", "kafka"},
+		},
+	}
+	schema := schema.CompileSchema(schemaAst, nil)
+
+	inputStr := "deployment/group1/project1/project1-backend/postgres/admin"
+	fmt.Println("Input to validate:", inputStr)
+	err = Validate(inputStr, schema, &store)
+	if err != nil {
+		fmt.Printf("Validation failed: %s\n", err)
+		os.Exit(1)
+	} else {
+		fmt.Println("Validation succeeded")
+	}
+
+	inputStr = "deployment/group1/project1/something-project1-backend/postgres/admin"
+	fmt.Println("Input to validate:", inputStr)
+	err = Validate(inputStr, schema, &store)
+	if err != nil {
+		fmt.Printf("Validation failed: %s\n", err)
+	} else {
+		fmt.Println("Validation succeeded")
+	}
+}
+
 func main() {
+	if _, found := os.LookupEnv("TEST_VARIABLE_MODIFIERS"); found {
+		testVariableModifiers()
+		return
+	}
+
 	toDebug := false
 	if toDebug {
 		debug()
