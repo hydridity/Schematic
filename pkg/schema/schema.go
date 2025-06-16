@@ -1,7 +1,6 @@
 package schema
 
 import (
-	"errors"
 	"fmt"
 	"strings"
 
@@ -13,181 +12,75 @@ type VariableStore interface {
 	GetVariableSet(name string) ([]string, bool)
 }
 
-// The basic interface of our constraints.
-type Constraint interface {
-	Consume([]string, VariableStore) ([]string, error)
-	Debug() string
-	GetVariableName() string
+// VariableModifierFunction represents a Modifier. It accepts a context variable value, split by '/', along with
+// a set of schema-provided arguments, and should modify the variable however it wants.
+// It should return the modified variable slice.
+type VariableModifierFunction func(variable []string, args []string) ([]string, error)
+
+type ValidationContext struct {
+	VariableStore     VariableStore
+	VariableModifiers map[string]VariableModifierFunction
 }
 
-// Concrete realization of our constraints.
-type LiteralConstraint struct {
-	Literal string
-}
-type WildcardSingleConstraint struct{}
-type WildcardMultiConstraint struct{}
-type VariableConstraint struct {
-	VariableName string
+type Schema interface {
+	Validate(input string, context *ValidationContext) error
+	String() string
 }
 
-type VariableSetConstraint struct {
-	VariableName string
+type Impl struct {
+	Constraints []Constraint
+	ast         *parser.SchemaAST
 }
 
-func (c *LiteralConstraint) Consume(path []string, store VariableStore) ([]string, error) {
-	if len(path) <= 0 {
-		return nil, errors.New("empty path")
+func (s *Impl) String() string {
+	builder := strings.Builder{}
+	builder.WriteString("AST:\n")
+	builder.WriteString(s.ast.String())
+	builder.WriteString("\n\nConstraints:\n")
+	for _, constraint := range s.Constraints {
+		builder.WriteString(constraint.String())
+		builder.WriteString("\n")
 	}
-	if path[0] != c.Literal {
-		return nil, fmt.Errorf("expected '%s', got '%s'", c.Literal, path[0])
-	}
-	return path[1:], nil
+	return builder.String()
 }
 
-func (c *LiteralConstraint) Debug() string {
-	return fmt.Sprintf("LiteralConstraint(%s)", c.Literal)
-}
-
-func (c *LiteralConstraint) GetVariableName() string {
-	return "" // Literal constraints do not have a variable name
-}
-
-func (c *WildcardSingleConstraint) Consume(path []string, store VariableStore) ([]string, error) {
-	if len(path) <= 0 {
-		return nil, errors.New("empty path")
-	}
-	return path[1:], nil
-}
-func (c *WildcardSingleConstraint) Debug() string {
-	return "WildcardSingleConstraint"
-}
-
-func (c *WildcardSingleConstraint) GetVariableName() string {
-	return ""
-}
-
-func (c *WildcardMultiConstraint) Consume(path []string, store VariableStore) ([]string, error) {
-	return []string{}, nil
-}
-
-func (c *WildcardMultiConstraint) Debug() string {
-	return "WildcardMultiConstraint"
-}
-
-func (c *WildcardMultiConstraint) GetVariableName() string {
-	return ""
-}
-
-func (c *VariableConstraint) Consume(path []string, store VariableStore) ([]string, error) {
-	if len(path) <= 0 {
-		return nil, errors.New("empty path")
-	}
-	variable, found := store.GetVariable(c.VariableName)
-	if !found {
-		return nil, fmt.Errorf("variable '%s' not found in store", c.VariableName)
-	}
-	// TODO: Handle variable without "/"
-	// Check if variable contains "/"
-	if len(variable) > 0 && strings.Contains(variable, "/") {
-		parts := strings.Split(variable, "/")
-		if len(path) < len(parts) {
-			return nil, errors.New("path too short for variable with '/'")
-		}
-		for i, part := range parts {
-			if path[i] != part {
-				return nil, errors.New("invalid variable constraint value")
-			}
-		}
-		return path[len(parts):], nil
+func (s *Impl) Validate(input string, context *ValidationContext) error {
+	mergedModifiers := getPredefinedModifiers()
+	for k, v := range context.VariableModifiers {
+		mergedModifiers[k] = v
 	}
 
-	// if path[0] != variable {
-	// 	// Perhaps pointer ?
-	// 	// Perhaps "variable store" in the VariableConstraint object itself ?
-	// 	return nil, errors.New("invalid variable constraint value")
-	// }
-	return path[1:], nil
-}
-
-func (c *VariableConstraint) Debug() string {
-	return fmt.Sprintf("VariableConstraint(%s)", c.VariableName)
-}
-
-func (c *VariableConstraint) GetVariableName() string {
-	return c.VariableName
-}
-
-func (c *VariableSetConstraint) Consume(path []string, store VariableStore) ([]string, error) {
-	if len(path) <= 0 {
-		return nil, errors.New("empty path")
+	mergedContext := ValidationContext{
+		VariableStore:     context.VariableStore,
+		VariableModifiers: mergedModifiers,
 	}
-	variable, found := store.GetVariableSet(c.VariableName)
-	if !found {
-		return nil, fmt.Errorf("variable '%s' not found in store", c.VariableName)
-	}
-	if len(variable) == 0 {
-		return nil, fmt.Errorf("variable set '%s' is empty", c.VariableName)
-	}
-	foundInSet := false
-	for _, v := range variable {
-		if path[0] == v {
-			foundInSet = true
-			break
-		}
-	}
-	if !foundInSet {
-		return nil, errors.New("invalid variable set constraint value")
-	}
-	return path[1:], nil
-}
 
-func (c *VariableSetConstraint) Debug() string {
-	return fmt.Sprintf("VariableSetConstraint(%s)", c.VariableName)
-}
-
-func (c *VariableSetConstraint) GetVariableName() string {
-	return c.VariableName
-}
-
-func GetVariableValue(name string) string {
-	fmt.Println("test")
-	return "test"
-}
-
-func CompileSchema(schemaAst *parser.Schema, context map[string]string) []Constraint {
-
-	constraints := make([]Constraint, 0, len(schemaAst.Parts))
-
-	for _, part := range schemaAst.Parts {
-		switch {
-
-		case part.Var != nil:
-			fmt.Println("Var:", part.Var.Name)
-			constraints = append(constraints, &VariableConstraint{VariableName: part.Var.Name})
-			if part.Var.Modifier != nil {
-				// TODO: handle modifiers
-				fmt.Printf("Modifier: %s(%s), Argument: %s\n", part.Var.Modifier.Func, part.Var.Modifier.Arg, part.Var.Modifier.Arg)
-			}
-
-		case part.Wildcard != nil:
-			fmt.Println("Wildcard:", *part.Wildcard)
-			if *part.Wildcard == "+" {
-				constraints = append(constraints, &WildcardSingleConstraint{})
-			} else if *part.Wildcard == "*" {
-				constraints = append(constraints, &WildcardMultiConstraint{})
-			}
-
-		case part.VarSet != nil:
-			fmt.Println("VarSet:", part.VarSet.Name)
-			constraints = append(constraints, &VariableSetConstraint{VariableName: part.VarSet.Name})
-
-		case part.Literal != nil:
-			fmt.Println("Literal:", *part.Literal)
-			constraints = append(constraints, &LiteralConstraint{
-				Literal: *part.Literal,
-			})
+	inputSegments := strings.Split(strings.Trim(input, "/"), "/")
+	for _, constraint := range s.Constraints {
+		var err error
+		inputSegments, err = constraint.Consume(inputSegments, &mergedContext)
+		if err != nil {
+			return fmt.Errorf("failed to consume input '%s' with constraint '%s': %w", input, constraint.String(), err)
 		}
 	}
 
-	return constraints
+	if len(inputSegments) > 0 {
+		return fmt.Errorf("input '%s' did not fully consume all segments, remaining: %v", input, inputSegments)
+	}
+	return nil
+}
+
+func CreateSchema(schemaStr string) (Schema, error) {
+	parserObj, err := parser.NewParser()
+	if err != nil {
+		return nil, err
+	}
+
+	schemaAst, err := parserObj.ParseString("", schemaStr)
+	if err != nil {
+		return nil, err
+	}
+
+	constraints := CompileConstraints(schemaAst)
+	return &Impl{Constraints: constraints, ast: schemaAst}, nil
 }
