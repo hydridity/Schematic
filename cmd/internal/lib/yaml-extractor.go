@@ -46,3 +46,13 @@ func ExtractFromYaml(path string) ([]string, error) {
 	}
 	return matches, nil
 }
+
+func SanitizePath(path string) string {
+	path = strings.TrimSpace(path)
+	re := regexp.MustCompile(`^<path:([^>|]+)`)
+	matches := re.FindStringSubmatch(path)
+	if len(matches) > 1 {
+		return matches[1]
+	}
+	return path
+}
