@@ -147,6 +147,12 @@ func main() {
 		fmt.Println("Sanitized:", lib.SanitizePath(input))
 	}
 
+	for _, input := range inputs {
+		input = lib.SanitizePath(input)
+		path, key := lib.ProcessPath(input)
+		fmt.Printf("Processed Path: %s, Key: %s\n", path, key)
+	}
+
 	inputStr := "deployment/backend/postgres/admin" // TODO: Some inputs for raw API Vault paths will have "data" after mounth path
 	//TODO Example: "deployment/data/group1/helm-project1/postgres/admin"
 	fmt.Println("Input to validate:", inputStr)
