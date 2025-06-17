@@ -1,0 +1,55 @@
+root_var: '<path:1>'
+
+middle: 'middle of <path:2> the string'
+
+simple_block:
+  val: '<path:3>'
+
+really:
+  nested:
+    block:
+      a:
+        couple:
+          more:
+            okay:
+              enough: '<path:4>'
+
+how:
+  about:
+    lists:
+      - '<path:5>'
+      - '<path:6>'
+
+lists:
+  with:
+    - other
+    - strings
+    - '<path:7>'
+    - somewhere
+    - between
+    - '<path:8>'
+    - them
+
+key:
+  names:
+    '<path:9>': hello
+
+
+untrimmed_strings_left: ' <path:10>'
+untrimmed_strings_right: '<path:11> '
+untrimmed_strings_both: ' <path:12> '
+
+multiple:
+  paths:
+    in_one_key: '<path:13>, <path:14>  <path:15> enough! <path:16> the end'
+
+path_with_modifiers: '<path:17 | jsonParse>'
+path_with_modifiers_and_id: '<path:18#id | someModifier>'
+
+base64_encoded_inline_path_19: 'PHBhdGg6MTk+'  # '<path:19>'
+base64_encoded_inline_path_20_with_jsonParse_modifier: 'PHBhdGg6MjAgfCBqc29uUGFyc2U+'  # '<path:20 | jsonParse>'
+
+base64:
+  encoded:
+    inline_path_21:
+      in_the_middle_of_the_string: 'aGVsbG8gPHBhdGg6MjE+IHdvcmxk'  # hello <path:21> world
