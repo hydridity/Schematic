@@ -56,3 +56,11 @@ func SanitizePath(path string) string {
 	}
 	return path
 }
+
+func ProcessPath(path string) (string, string) {
+	result := strings.Split(path, "#")
+	if len(result) > 1 {
+		return result[0], result[1]
+	}
+	return path, ""
+}
