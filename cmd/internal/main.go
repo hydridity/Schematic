@@ -131,7 +131,7 @@ func main() {
 		log.Fatal(err)
 	}
 
-	inputStr := "deployment/group1/helm-project1/postgres/admin" // TODO: Some inputs for raw API Vault paths will have "data" after mounth path
+	inputStr := "deployment/group1/project1/postgres/admin" // TODO: Some inputs for raw API Vault paths will have "data" after mounth path
 	//TODO Example: "deployment/data/group1/helm-project1/postgres/admin"
 	fmt.Println("Input to validate:", inputStr)
 	err = schemaCompiled.Validate(inputStr, &context)
