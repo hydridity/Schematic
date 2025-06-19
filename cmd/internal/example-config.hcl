@@ -1,4 +1,4 @@
-schema = "$gitlab_path.strip_prefix(\"helm-\")/$[technologies]/+"
+schema = "$gitlab_path.strip_last_prefix(\"helm-\")/$[technologies]/+"
 
 input "gitlab_path" "environment"{
     //type = "envvar"
