@@ -2,9 +2,10 @@ package main
 
 import (
 	"fmt"
-	"github.com/hydridity/Schematic/pkg/schema"
 	"log"
 	"os"
+
+	"github.com/hydridity/Schematic/pkg/schema"
 
 	"github.com/hashicorp/hcl/v2"
 	"github.com/hashicorp/hcl/v2/gohcl"
@@ -141,4 +142,10 @@ func main() {
 	} else {
 		fmt.Println("Validation succeeded")
 	}
+
+	result, err := schemaCompiled.ExtractContext(inputStr)
+	if err != nil {
+		log.Fatalf("Failed to extract context from input '%s': %s", inputStr, err)
+	}
+	fmt.Printf("Extracted context: %v\n", result)
 }
