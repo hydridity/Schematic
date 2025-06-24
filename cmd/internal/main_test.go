@@ -166,3 +166,104 @@ func TestSchemaFormat(t *testing.T) {
 		})
 	}
 }
+
+func TestQuantifierWildcard(t *testing.T) {
+	tests := []struct {
+		name            string
+		schemaStr       string
+		gitlabPath      string
+		input           string
+		expectValidate  bool
+		expectSchemaErr bool
+	}{
+		{
+			name:            "Original Syntax without quantifier",
+			schemaStr:       `Literal1/+`,
+			input:           "Literal1/test1",
+			expectValidate:  true,
+			expectSchemaErr: false,
+		},
+		{
+			name:            "Original Syntax without quantifier without segment",
+			schemaStr:       `Literal1/+`,
+			input:           "Literal1",
+			expectValidate:  false,
+			expectSchemaErr: false,
+		},
+		{
+			name:            "Quantifier defining required segment without segment- same as original syntax",
+			schemaStr:       `Literal1/+{1,1}`,
+			input:           "Literal1",
+			expectValidate:  false,
+			expectSchemaErr: false,
+		},
+		{
+			name:            "Quantifier defining required segment - same as original syntax",
+			schemaStr:       `Literal1/+{1,1}`,
+			input:           "Literal1/test1",
+			expectValidate:  true,
+			expectSchemaErr: false,
+		},
+		{
+			name:            "Quantifier defining optional segment",
+			schemaStr:       `Literal1/+{0,1}`,
+			input:           "Literal1",
+			expectValidate:  true,
+			expectSchemaErr: false,
+		},
+		{
+			name:            "Quantifier defining optional segment, with within range segment",
+			schemaStr:       `Literal1/+{0,1}`,
+			input:           "Literal1/test1",
+			expectValidate:  true,
+			expectSchemaErr: false,
+		},
+		{
+			name:            "Quantifier defining optional segment, with out of range segments",
+			schemaStr:       `Literal1/+{0,1}`,
+			input:           "Literal1/test1/test2",
+			expectValidate:  false,
+			expectSchemaErr: false,
+		},
+		{
+			name:            "Quantifier defining optional segment, with within range segments",
+			schemaStr:       `Literal1/+{0,3}`,
+			input:           "Literal1/test1/test2/test3",
+			expectValidate:  true,
+			expectSchemaErr: false,
+		},
+		{
+			name:            "Quantifier wrong sequence",
+			schemaStr:       `Literal1/+{3,0}`,
+			input:           "Literal1/test1/test2/test3",
+			expectValidate:  false,
+			expectSchemaErr: true,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			store := &testVariableStore{}
+			schemaCompiled, err := schema.CreateSchema(tc.schemaStr)
+			if tc.expectSchemaErr {
+				if err == nil {
+					t.Errorf("expected schema compilation error, but got none")
+				}
+				// If schema compilation fails, skip validation
+				return
+			} else {
+				if err != nil {
+					t.Fatalf("Error creating schema: %v", err)
+				}
+			}
+
+			err = schemaCompiled.Validate(tc.input, &schema.ValidationContext{VariableStore: store})
+			if tc.expectValidate && err != nil {
+				t.Errorf("expected validation to succeed, got error: %v", err)
+			}
+			if !tc.expectValidate && err == nil {
+				t.Errorf("expected validation to fail, but it succeeded")
+			}
+		})
+	}
+}
