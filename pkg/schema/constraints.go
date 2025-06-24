@@ -61,11 +61,26 @@ func (c *LiteralConstraint) GetVariableName() string {
 }
 
 func (c *WildcardSingleConstraint) Consume(path []string, context *ValidationContext) ([]string, error) {
-	if len(path) <= 0 {
-		return nil, errors.New("empty path")
+	// if len(path) <= 0 {
+	// 	return nil, errors.New("empty path")
+	// }
+	//schema: literal1/+{0,2}
+	//path [literal1/test]
+	if len(path) < c.Min {
+		return nil, errors.New(fmt.Sprintf("not enough segments for quantified wildcard: need at least %d", c.Min))
 	}
+
+	if len(path) >= c.Max {
+		return path[c.Max:], nil
+	}
+
+	if len(path) >= c.Min && len(path) <= c.Max {
+		return []string{}, nil
+	}
+
 	return path[1:], nil
 }
+
 func (c *WildcardSingleConstraint) String() string {
 	return "WildcardSingleConstraint"
 }
