@@ -204,7 +204,15 @@ func CompileConstraints(schemaAst *parser.SchemaAST) []Constraint {
 
 		case part.Wildcard != nil:
 			if part.Wildcard.Symbol == "+" {
-				constraints = append(constraints, &WildcardSingleConstraint{})
+				if part.Wildcard.Quantifier != nil {
+					//TODO: Do we need checks for individual fields ?
+					min := part.Wildcard.Quantifier.Min
+					max := part.Wildcard.Quantifier.Max
+					constraints = append(constraints, &WildcardSingleConstraint{Min: min, Max: max})
+				} else {
+					//We handle behaviour as before
+					constraints = append(constraints, &WildcardSingleConstraint{Min: 1, Max: 1})
+				}
 			} else if part.Wildcard.Symbol == "*" {
 				constraints = append(constraints, &WildcardMultiConstraint{})
 			}
