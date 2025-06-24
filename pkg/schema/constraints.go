@@ -19,7 +19,10 @@ type Constraint interface {
 type LiteralConstraint struct {
 	Literal string
 }
-type WildcardSingleConstraint struct{}
+type WildcardSingleConstraint struct {
+	Min int
+	Max int
+}
 type WildcardMultiConstraint struct{}
 
 type VariableModifier struct {
