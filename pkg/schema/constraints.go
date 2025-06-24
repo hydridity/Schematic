@@ -3,8 +3,9 @@ package schema
 import (
 	"errors"
 	"fmt"
-	"github.com/hydridity/Schematic/pkg/parser"
 	"strings"
+
+	"github.com/hydridity/Schematic/pkg/parser"
 )
 
 // The basic interface of our constraints.
@@ -184,9 +185,9 @@ func CompileConstraints(schemaAst *parser.SchemaAST) []Constraint {
 			constraints = append(constraints, &VariableConstraint{VariableName: part.Var.Name, Modifiers: modifiers})
 
 		case part.Wildcard != nil:
-			if *part.Wildcard == "+" {
+			if part.Wildcard.Symbol == "+" {
 				constraints = append(constraints, &WildcardSingleConstraint{})
-			} else if *part.Wildcard == "*" {
+			} else if part.Wildcard.Symbol == "*" {
 				constraints = append(constraints, &WildcardMultiConstraint{})
 			}
 
