@@ -2,9 +2,10 @@ package parser
 
 import (
 	"fmt"
+	"strings"
+
 	"github.com/alecthomas/participle/v2"
 	"github.com/alecthomas/participle/v2/lexer"
-	"strings"
 )
 
 // Define a simple AST for a schema like: $gitlab_path.strip_prefix("helm-")/$[technologies]/+
@@ -13,10 +14,20 @@ type SchemaAST struct {
 }
 
 type Part struct {
-	Var      *Var    `  @@`
-	VarSet   *VarSet `| @@`
-	Wildcard *string `| @("+" | "*")`
-	Literal  *string `| @Ident`
+	Var      *Var      `  @@`
+	VarSet   *VarSet   `| @@`
+	Wildcard *Wildcard `| @@`
+	Literal  *string   `| @Ident`
+}
+
+type Wildcard struct {
+	Symbol     string      `@("+" | "*")`
+	Quantifier *Quantifier `@@?`
+}
+
+type Quantifier struct {
+	Min int `"{" @Int`
+	Max int `( "," @Int )? "}"`
 }
 
 type Var struct {
@@ -46,6 +57,9 @@ var schemaLexer = lexer.MustSimple([]lexer.SimpleRule{
 	{Name: "RParen", Pattern: `\)`},
 	{Name: "LBracket", Pattern: `\[`},
 	{Name: "RBracket", Pattern: `\]`},
+	{Name: "LCBracker", Pattern: `\{`},
+	{Name: "RCBracker", Pattern: `\}`},
+	{Name: "Int", Pattern: `[0-9]+`},
 	{Name: "Whitespace", Pattern: `[ \t\n\r]+`},
 })
 
@@ -72,7 +86,20 @@ func (p *Part) String() string {
 		builder.WriteString(p.VarSet.Name)
 	case p.Wildcard != nil:
 		builder.WriteString("Wildcard:")
-		builder.WriteString(*p.Wildcard)
+		builder.WriteString(p.Wildcard.Symbol)
+		if p.Wildcard.Quantifier != nil {
+			if p.Wildcard.Quantifier.Min != 0 {
+				builder.WriteString(fmt.Sprintf("\n Quantifier Min: %d\n", p.Wildcard.Quantifier.Min))
+			} else {
+				builder.WriteString("Quantifier Min is Missing!")
+			}
+
+			if p.Wildcard.Quantifier.Max != 0 {
+				builder.WriteString(fmt.Sprintf("\n Quantifier Max: %d\n", p.Wildcard.Quantifier.Max))
+			} else {
+				builder.WriteString(" Quantifier Max is Missing!")
+			}
+		}
 	case p.Literal != nil:
 		builder.WriteString("Literal:")
 		builder.WriteString(*p.Literal)
