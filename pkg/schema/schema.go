@@ -46,26 +46,14 @@ func (s *Impl) String() string {
 }
 
 func (s *Impl) Validate(input string, context *ValidationContext) error {
-	mergedModifiers := getPredefinedModifiers()
-	for k, v := range context.VariableModifiers {
-		mergedModifiers[k] = v
-	}
-
-	mergedContext := ValidationContext{
-		VariableStore:     context.VariableStore,
-		VariableModifiers: mergedModifiers,
-	}
-
 	inputSegments := strings.Split(strings.Trim(input, "/"), "/")
-	for _, constraint := range s.Constraints {
-		var err error
-		inputSegments, err = constraint.Consume(inputSegments, &mergedContext)
-		if err != nil {
-			return fmt.Errorf("failed to consume input '%s' with constraint '%s': %w", input, constraint.String(), err)
-		}
+
+	remainingSegments, err := s.consume(inputSegments, context)
+	if err != nil {
+		return err
 	}
 
-	if len(inputSegments) > 0 {
+	if len(remainingSegments) > 0 {
 		return fmt.Errorf("input '%s' did not fully consume all segments, remaining: %v", input, inputSegments)
 	}
 	return nil
