@@ -2,14 +2,10 @@ package parser
 
 import (
 	"fmt"
-	"github.com/alecthomas/participle/v2"
 	"github.com/alecthomas/participle/v2/lexer"
-	"os"
 	"testing"
 )
 
-var parserObj *participle.Parser[SchemaAST]
-var symbols = schemaLexer.Symbols()
 var symbolsByRune = lexer.SymbolsByRune(schemaLexer)
 
 func getStringLexer(s string, t *testing.T) lexer.Lexer {
@@ -31,14 +27,6 @@ func getAllTokens(lex lexer.Lexer) ([]lexer.Token, error) {
 			return res, nil
 		}
 		res = append(res, nextToken)
-	}
-}
-
-func setup() {
-	var err error
-	parserObj, err = NewParser()
-	if err != nil {
-		panic(err)
 	}
 }
 
@@ -459,10 +447,4 @@ func TestLexer(t *testing.T) {
 			t.Run(testCase.name, testCase.test)
 		}
 	})
-}
-
-func TestMain(m *testing.M) {
-	setup()
-	code := m.Run()
-	os.Exit(code)
 }
