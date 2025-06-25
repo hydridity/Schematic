@@ -57,8 +57,8 @@ var schemaLexer = lexer.MustSimple([]lexer.SimpleRule{
 	{Name: "RParen", Pattern: `\)`},
 	{Name: "LBracket", Pattern: `\[`},
 	{Name: "RBracket", Pattern: `\]`},
-	{Name: "LCBracker", Pattern: `\{`},
-	{Name: "RCBracker", Pattern: `\}`},
+	{Name: "LCBracket", Pattern: `\{`},
+	{Name: "RCBracket", Pattern: `\}`},
 	{Name: "Int", Pattern: `[0-9]+`},
 	{Name: "Whitespace", Pattern: `[ \t\n\r]+`},
 })
