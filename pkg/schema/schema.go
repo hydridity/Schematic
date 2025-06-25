@@ -24,6 +24,7 @@ type ValidationContext struct {
 
 type Schema interface {
 	Validate(input string, context *ValidationContext) error
+	consume(inputSegments []string, context *ValidationContext) ([]string, error)
 	String() string
 }
 
@@ -68,6 +69,27 @@ func (s *Impl) Validate(input string, context *ValidationContext) error {
 		return fmt.Errorf("input '%s' did not fully consume all segments, remaining: %v", input, inputSegments)
 	}
 	return nil
+}
+
+func (s *Impl) consume(inputSegments []string, context *ValidationContext) ([]string, error) {
+	mergedModifiers := getPredefinedModifiers()
+	for k, v := range context.VariableModifiers {
+		mergedModifiers[k] = v
+	}
+
+	mergedContext := ValidationContext{
+		VariableStore:     context.VariableStore,
+		VariableModifiers: mergedModifiers,
+	}
+
+	for _, constraint := range s.Constraints {
+		var err error
+		inputSegments, err = constraint.Consume(inputSegments, &mergedContext)
+		if err != nil {
+			return nil, fmt.Errorf("failed to consume input '%s' with constraint %w", constraint.String(), err)
+		}
+	}
+	return inputSegments, nil
 }
 
 func CreateSchema(schemaStr string) (Schema, error) {
