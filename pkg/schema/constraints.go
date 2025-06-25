@@ -180,7 +180,6 @@ func (c *VariableSetConstraint) Consume(path []string, context *ValidationContex
 		subSchemaInput, err = subSchemaCompiled.consume(subSchemaInput, context)
 
 		if err == nil {
-			fmt.Println("Validated?")
 			foundInSet = true
 			path = subSchemaInput
 			break
