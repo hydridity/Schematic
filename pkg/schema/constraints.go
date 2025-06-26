@@ -3,6 +3,7 @@ package schema
 import (
 	"errors"
 	"fmt"
+	"regexp"
 	"strings"
 
 	"github.com/hydridity/Schematic/pkg/parser"
@@ -19,6 +20,11 @@ type Constraint interface {
 type LiteralConstraint struct {
 	Literal string
 }
+
+type RegexConstraint struct {
+	Pattern string
+}
+
 type WildcardSingleConstraint struct {
 	Min int
 	Max int
@@ -58,6 +64,30 @@ func (c *LiteralConstraint) String() string {
 
 func (c *LiteralConstraint) GetVariableName() string {
 	return "" // Literal constraints do not have a variable name
+}
+
+func (c *RegexConstraint) Consume(path []string, context *ValidationContext) ([]string, error) {
+	if len(path) <= 0 {
+		return nil, errors.New("empty path")
+	}
+
+	pattern, err := regexp.Compile(c.Pattern)
+	if err != nil {
+		return nil, err
+	}
+
+	if !pattern.MatchString(path[0]) {
+		return nil, fmt.Errorf("expected '%s', does not match regex '%s'", path[0], c.Pattern)
+	}
+	return path[1:], nil
+}
+
+func (c *RegexConstraint) String() string {
+	return fmt.Sprintf("RegexConstraint(%s)", c.Pattern)
+}
+
+func (c *RegexConstraint) GetVariableName() string {
+	return "" // Regex constraints do not have a variable name
 }
 
 func (c *WildcardSingleConstraint) Consume(path []string, context *ValidationContext) ([]string, error) {
@@ -239,6 +269,8 @@ func CompileConstraints(schemaAst *parser.SchemaAST) []Constraint {
 			constraints = append(constraints, &LiteralConstraint{
 				Literal: *part.Literal,
 			})
+		case part.Regex != nil:
+			constraints = append(constraints, &RegexConstraint{Pattern: *part.Regex})
 		}
 	}
 
