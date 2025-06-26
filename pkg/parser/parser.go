@@ -18,6 +18,7 @@ type Part struct {
 	VarSet   *VarSet   `| @@`
 	Wildcard *Wildcard `| @@`
 	Literal  *string   `| @Ident`
+	Regex    *string   `| @RegexString`
 }
 
 type Wildcard struct {
@@ -47,11 +48,13 @@ type Modifier struct {
 var schemaLexer = lexer.MustSimple([]lexer.SimpleRule{
 	{Name: "Ident", Pattern: `[a-zA-Z_][a-zA-Z0-9_-]*`},
 	{Name: "String", Pattern: `"(?:\\.|[^"])*"`},
+	{Name: "RegexString", Pattern: "#[^#]*#"},
 	{Name: "Slash", Pattern: `/`},
 	{Name: "Dot", Pattern: `\.`},
 	{Name: "Comma", Pattern: `\,`},
 	{Name: "Plus", Pattern: `\+`},
 	{Name: "Star", Pattern: `\*`},
+	{Name: "Hashtag", Pattern: `\#`},
 	{Name: "Dollar", Pattern: `\$`},
 	{Name: "LParen", Pattern: `\(`},
 	{Name: "RParen", Pattern: `\)`},
@@ -63,10 +66,16 @@ var schemaLexer = lexer.MustSimple([]lexer.SimpleRule{
 	{Name: "Whitespace", Pattern: `[ \t\n\r]+`},
 })
 
+func unquoteRegexString(token lexer.Token) (lexer.Token, error) {
+	token.Value = strings.Trim(token.Value, "#")
+	return token, nil
+}
+
 func NewParser() (*participle.Parser[SchemaAST], error) {
 	return participle.Build[SchemaAST](
 		participle.Lexer(schemaLexer),
 		participle.Unquote("String"),
+		participle.Map(unquoteRegexString, "RegexString"),
 	)
 }
 
@@ -103,6 +112,9 @@ func (p *Part) String() string {
 	case p.Literal != nil:
 		builder.WriteString("Literal:")
 		builder.WriteString(*p.Literal)
+	case p.Regex != nil:
+		builder.WriteString("Regex:")
+		builder.WriteString(*p.Regex)
 	}
 
 	return builder.String()
@@ -110,7 +122,9 @@ func (p *Part) String() string {
 
 func (s *SchemaAST) String() string {
 	builder := strings.Builder{}
-
+	if s == nil {
+		return ""
+	}
 	for i, part := range s.Parts {
 		if i > 0 {
 			builder.WriteString("\n")
